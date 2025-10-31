@@ -6,4 +6,11 @@ license = "Apache-2.0"
 rust-version = "1.78.0"
 authors = ["kikeg"]
 
+
 [dependencies]
+bumpalo = "3.19.0"
+derive-where = "1.6.0"
+
+[dev-dependencies]
+assert_matches = "1.5.0"
+pretty_assertions = "1.4.1"
