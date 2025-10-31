@@ -1,0 +1,90 @@
+name: CI
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+     - main
+# I would'nt update this repo often,
+# so schedule will be soon disabled anyway.
+#  schedule:
+#    - cron: '0 7 * * *'
+
+jobs:
+  cargo-deny:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: EmbarkStudios/cargo-deny-action@v2
+      with:
+        arguments: --all-features
+  test:
+    strategy:
+      matrix:
+        build:
+          - linux-stable
+          - windows-stable
+          - macos-stable
+        features:
+          - default
+          - no-default
+          - all
+        include:
+          - build: linux-stable
+            os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - build: windows-stable
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
+          - build: macos-stable
+            os: macos-latest
+            target: aarch64-apple-darwin
+          - features: default
+            feature-flag: ""
+          - features: no-default
+            feature-flag: --no-default-features
+          - features: all
+            feature-flag: --all-features
+    runs-on: ${{ matrix.os }}
+    env:
+      CARGO_TERM_COLOR: always
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          target: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test --target ${{ matrix.target }} ${{ matrix.feature-flag }}
+  msrv:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        features:
+          - default
+          - no-default
+          - all
+        include:
+          - features: default
+            feature-flag: ""
+          - features: no-default
+            feature-flag: --no-default-features
+          - features: all
+            feature-flag: --all-features
+    env:
+      CARGO_TERM_COLOR: always
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-msrv
+      - run: cargo msrv --version
+      - run: cargo msrv verify
+      - if: ${{ failure() }}
+        run: cargo msrv find -- cargo test ${{ matrix.feature-flag }} --ignore-rust-version
