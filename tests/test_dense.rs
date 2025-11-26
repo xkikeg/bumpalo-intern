@@ -68,6 +68,30 @@ fn insert_alias() {
 }
 
 #[test]
+fn len_and_is_empty() {
+    let arena = Bump::new();
+    let mut store: DenseInternStore<MyInterned<'_>> = DenseInternStore::new(&arena);
+
+    assert!(store.is_empty());
+    assert_eq!(0, store.len());
+
+    let foo = store.try_insert(MyInterned("foo")).unwrap();
+
+    assert!(!store.is_empty());
+    assert_eq!(1, store.len());
+
+    store.try_insert(MyInterned("bar")).unwrap();
+
+    assert!(!store.is_empty());
+    assert_eq!(2, store.len());
+
+    store.insert_alias(MyInterned("foo_alias"), foo).unwrap();
+
+    assert!(!store.is_empty());
+    assert_eq!(2, store.len());
+}
+
+#[test]
 fn iter_returns_all() {
     let arena = Bump::new();
     let mut store: DenseInternStore<MyInterned<'_>> = DenseInternStore::new(&arena);
