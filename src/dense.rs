@@ -61,20 +61,10 @@ impl<T> std::error::Error for OccupiedError<T> {}
 /// Interned object tag, which is actually the number densely counts up.
 /// You need [`DenseInternStore`] to resolve the actual value.
 #[derive_where(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-// #[derive(PartialEq, Eq, Hash, Clone, Copy)]
 pub struct InternTag<T> {
     id: usize,
     phantom: PhantomData<T>,
 }
-
-// impl<T> Debug for InternTag<T> {
-//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-//         f.debug_struct("InternTag")
-//             .field("id", self.id)
-//             .field("phantom", self.phantom)
-//             .finish()
-//     }
-// }
 
 impl<T> InternTag<T> {
     /// Constructs InternTag out of the plain index.
@@ -134,27 +124,23 @@ impl<'arena, T> DenseInternStore<'arena, T> {
     pub fn len(&self) -> usize {
         self.items.len()
     }
-}
 
-impl<'arena, T> DenseInternStore<'arena, T>
-where
-    T: Copy,
-{
     /// Returns the corresponding instance for the tag,
     /// or `None` if it doesn't exists.
-    pub fn get(&self, tag: InternTag<T>) -> Option<T> {
+    pub fn get(&self, tag: InternTag<T>) -> Option<T>
+    where
+        T: Copy,
+    {
         self.items.get(tag.id).copied()
     }
-}
 
-impl<'arena, T> DenseInternStore<'arena, T>
-where
-    T: Interned<'arena>,
-{
     /// Interns given value and returns the corresponding tag.
     /// Note if `value` is registered as alias, it'll return the canonical one.
     /// If `value` is not registered yet, register the value as canonical value.
-    pub fn ensure<'a>(&mut self, value: T::View<'a>) -> InternTag<T> {
+    pub fn ensure<'a>(&mut self, value: T::View<'a>) -> InternTag<T>
+    where
+        T: Interned<'arena>,
+    {
         match self.resolve(value.intern_key()) {
             Some(found) => found,
             None => self.insert_impl(value),
@@ -163,7 +149,10 @@ where
 
     /// Interns the given value and returns the tag, only when there's no interned object yet.
     /// Returns `None` if insert failed because of existing element.
-    pub fn try_insert<'a>(&mut self, value: T::View<'a>) -> Result<InternTag<T>, OccupiedError<T>> {
+    pub fn try_insert<'a>(&mut self, value: T::View<'a>) -> Result<InternTag<T>, OccupiedError<T>>
+    where
+        T: Interned<'arena>,
+    {
         if let Some(existing) = self.resolve(value.intern_key()) {
             return Err(OccupiedError { existing });
         }
@@ -172,7 +161,10 @@ where
 
     /// Inserts the given value with interning it.
     /// This method doesn't check the duplication, so caller must ensure there's no dups.
-    fn insert_impl<'a>(&mut self, value: T::View<'a>) -> InternTag<T> {
+    fn insert_impl<'a>(&mut self, value: T::View<'a>) -> InternTag<T>
+    where
+        T: Interned<'arena>,
+    {
         let id = self.items.len();
         let (key, interned) = T::intern_from(self.arena, value);
         self.items.push(interned);
@@ -189,7 +181,10 @@ where
         &mut self,
         value: T::View<'a>,
         canonical: InternTag<T>,
-    ) -> Result<(), OccupiedError<T>> {
+    ) -> Result<(), OccupiedError<T>>
+    where
+        T: Interned<'arena>,
+    {
         match self.resolve(value.intern_key()) {
             Some(existing) => Err(OccupiedError { existing }),
             None => {
@@ -199,9 +194,7 @@ where
             }
         }
     }
-}
 
-impl<'arena, T> DenseInternStore<'arena, T> {
     /// Returns the specified value key if found, otherwise None.
     #[inline]
     pub fn resolve(&self, value: &str) -> Option<InternTag<T>> {

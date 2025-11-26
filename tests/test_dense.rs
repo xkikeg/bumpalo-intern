@@ -66,3 +66,19 @@ fn insert_alias() {
 
     assert_eq!("foo", store.get(tag).unwrap().0);
 }
+
+#[test]
+fn iter_returns_all() {
+    let arena = Bump::new();
+    let mut store: DenseInternStore<MyInterned<'_>> = DenseInternStore::new(&arena);
+
+    let foo = store.try_insert(MyInterned("foo")).unwrap();
+    store.insert_alias(MyInterned("foo_alias"), foo).unwrap();
+    let bar = store.try_insert(MyInterned("bar")).unwrap();
+    let baz = store.try_insert(MyInterned("baz")).unwrap();
+
+    let got: Vec<InternTag<MyInterned<'_>>> = store.iter().collect();
+
+    let want = vec![foo, bar, baz];
+    assert_eq!(got, want);
+}
